@@ -41,3 +41,11 @@ self.addEventListener('fetch', e => {{
 open(os.path.join(root, 'sw.js'), 'w', encoding='utf8').write(sw)
 open(os.path.join(root, 'version.json'), 'w').write(json.dumps({'version': ver}) + '\n')
 print('built sw.js for version', ver, 'with', len(assets), 'assets')
+
+# GitHub Pages serves /docs, so keep a mirror of www there
+import shutil, os
+_docs = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'docs')
+_www = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'www')
+if os.path.isdir(_docs): shutil.rmtree(_docs)
+shutil.copytree(_www, _docs)
+print('mirrored www -> docs')
