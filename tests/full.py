@@ -172,7 +172,7 @@ async def main():
         # error box copy
         await pg.evaluate("showError(new Error('test boom'))"); check('error box visible & copyable', await pg.locator('#errBox:not([hidden])').count()==1 and 'test boom' in await pg.input_value('#errText'))
         await pg.click('[data-act=closeErr]')
-        check('footer version', 'v1.1.0' in await pg.inner_text('.foot'))
+        check('footer version', 'v1.2.0' in await pg.inner_text('.foot'))
         check('no console errors', not errs, errs)
         bad=[r for r in reqs if 'localhost' not in r and not r.startswith('data:')]
         check('no external requests', not bad, bad)

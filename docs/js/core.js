@@ -1,6 +1,6 @@
 'use strict';
 /* ───────────────────────── core: helpers, storage, settings, router ───────────────────────── */
-const APP_VERSION = '1.1.0';
+const APP_VERSION = '1.2.0';
 const APP_NAME = 'Biblioteca de las Rosas';
 
 const $ = (s, r = document) => r.querySelector(s);
@@ -175,27 +175,45 @@ function sfx(name) {
   } catch (e) { /* audio not available */ }
 }
 
-/* ── text-to-speech ── */
-let VOICES = [], warnedVoice = false;
-function loadVoices() { try { VOICES = speechSynthesis.getVoices(); } catch (e) { VOICES = []; } }
+/* ── text-to-speech ──
+   In the Android app the native Android voice is used (reliable). In a browser the Web Speech API is used.
+   Browsers on Android often report an empty voice list even though speaking works, so an empty list is not treated as an error. */
+let VOICES = [], voiceErrShown = false;
+function loadVoices() { try { VOICES = speechSynthesis.getVoices() || []; } catch (e) { VOICES = []; } }
 if ('speechSynthesis' in window) { loadVoices(); speechSynthesis.onvoiceschanged = loadVoices; }
 function spanishVoice() {
-  return VOICES.find(v => /^es[-_](MX|US|419)/i.test(v.lang)) || VOICES.find(v => /^es/i.test(v.lang)) || null;
+  return VOICES.find(v => /^es[-_](ES|MX|US|419)/i.test(v.lang)) || VOICES.find(v => /^es/i.test(v.lang)) || null;
+}
+function nativeTTS() {
+  try { return (window.Capacitor && Capacitor.isNativePlatform && Capacitor.isNativePlatform() && Capacitor.Plugins && Capacitor.Plugins.TextToSpeech) || null; } catch (e) { return null; }
+}
+function voiceProblem(detail) {
+  if (voiceErrShown) { toast('Audio could not play. Open Settings and tap "Test the Spanish voice" for help.', 4500); return; }
+  voiceErrShown = true;
+  showError('Spanish audio problem\n' + detail + '\n\nWhat to try: phone Settings > Text-to-speech > Speech Services by Google > Install voice data > Spanish. Then fully close and reopen the app, turn the media volume up, and try again.');
 }
 function speak(text, slow) {
+  const rate = slow ? Math.max(0.4, S.rate - 0.25) : S.rate;
+  const nat = nativeTTS();
+  if (nat) {
+    Promise.resolve(nat.stop()).catch(() => {}).then(() => nat.speak({ text, lang: 'es-ES', rate, pitch: 1.0, volume: 1.0, queueStrategy: 0 }))
+      .catch(e => { voiceProblem('Native voice error: ' + (e && (e.message || e.errorMessage) || JSON.stringify(e))); });
+    return;
+  }
   if (!('speechSynthesis' in window)) { toast('Audio is not available in this browser. The text still works.'); return; }
   try {
+    loadVoices();
     speechSynthesis.cancel();
     const u = new SpeechSynthesisUtterance(text);
     const v = spanishVoice();
-    if (v) { u.voice = v; u.lang = v.lang; }
-    else {
-      u.lang = 'es-ES';
-      if (!warnedVoice) { warnedVoice = true; toast('No Spanish voice found on this device. You can install one in your phone\'s text-to-speech settings.', 5000); }
-    }
-    u.rate = slow ? Math.max(0.4, S.rate - 0.25) : S.rate;
+    if (v) { u.voice = v; u.lang = v.lang; } else u.lang = 'es-ES';
+    u.rate = rate;
+    let started = false;
+    u.onstart = () => { started = true; };
+    u.onerror = e => { if (e.error !== 'canceled' && e.error !== 'interrupted') voiceProblem('Browser speech error: ' + (e.error || 'unknown') + '. Voices found: ' + VOICES.length + (VOICES.length && !v ? ' (none are Spanish)' : '')); };
     speechSynthesis.speak(u);
-  } catch (e) { toast('Audio could not play on this device.'); }
+    setTimeout(() => { if (!started && !speechSynthesis.speaking) voiceProblem('No sound started. Voices found: ' + VOICES.length + (VOICES.length && !v ? ' (none are Spanish)' : '') + '.'); }, 3000);
+  } catch (e) { voiceProblem('Audio exception: ' + (e && e.message || e)); }
 }
 
 /* ── router (hash based, works with the Android back button) ── */
