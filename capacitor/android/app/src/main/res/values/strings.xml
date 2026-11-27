@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Biblioteca de las Rosas</string>
+    <string name="title_activity_main">Biblioteca de las Rosas</string>
+    <string name="package_name">app.bibliotecarosas</string>
+    <string name="custom_url_scheme">app.bibliotecarosas</string>
+</resources>

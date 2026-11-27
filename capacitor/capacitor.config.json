@@ -1,0 +1,7 @@
+{
+  "appId": "app.bibliotecarosas",
+  "appName": "Biblioteca de las Rosas",
+  "webDir": "../www",
+  "android": { "allowMixedContent": false },
+  "server": { "androidScheme": "https" }
+}
